@@ -1,6 +1,11 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { useUser, useAuth } from "@clerk/clerk-react";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
+import { useEffect, useRef } from "react";
+import { useDispatch } from "react-redux";
+import { fetchUser } from "./features/user/userSlice";
+import { fetchConnections } from "./features/connections/connectionsSlice";
+import { addMessage } from "./features/messages/messagesSlice";
 import Login from "./pages/Login";
 import Feed from "./pages/Feed";
 import Messages from "./pages/Messages";
@@ -10,17 +15,54 @@ import Discover from "./pages/Discover";
 import Profile from "./pages/Profile";
 import CreatePost from "./pages/CreatePost";
 import Layout from "./pages/Layout";
-import { useEffect } from "react";
+import Notification from "./components/Notification";
 
 const App = () => {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const dispatch = useDispatch();
+  const location = useLocation();
+  const pathnameRef = useRef(location.pathname);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (user) {
+        const token = await getToken();
+        dispatch(fetchUser(token));
+        dispatch(fetchConnections(token));
+      }
+    };
+
+    fetchData();
+  }, [user, getToken, dispatch]);
+
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+  }, [location.pathname]);
 
   useEffect(() => {
     if (user) {
-      getToken().then((token) => console.log(token));
+      const eventSource = new EventSource(
+        import.meta.env.VITE_BASEURL + "/api/message/" + user.id,
+      );
+
+      eventSource.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+
+        if (pathnameRef.current === `/messages/${message.from_user_id._id}`) {
+          dispatch(addMessage(message));
+        } else {
+          toast.custom((t) => <Notification t={t} message={message} />, {
+            position: "bottom-right",
+          });
+        }
+      };
+
+      return () => {
+        eventSource.close();
+      };
     }
-  }, [user]);
+  }, [user, dispatch]);
   return (
     <>
       <Toaster />

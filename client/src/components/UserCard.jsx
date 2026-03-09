@@ -1,11 +1,59 @@
 import { MapPin, MessageCircle, Plus, UserPlus } from "lucide-react";
-import { dummyUserData } from "../assets/assets";
+import { useSelector, useDispatch } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
+import { fetchUser } from "../features/user/userSlice";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 const UserCard = ({ user }) => {
-  const currentUser = dummyUserData;
-  const handleFollow = async () => {};
+  const currentUser = useSelector((state) => state.user.value);
+  const { getToken } = useAuth();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const handleConnectionRequest = async () => {};
+  const handleFollow = async () => {
+    try {
+      const { data } = await api.post(
+        "/api/user/follow",
+        { id: user._id },
+        {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        },
+      );
+      if (data.success) {
+        toast.success(data.message);
+        dispatch(fetchUser(await getToken()));
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleConnectionRequest = async () => {
+    if (currentUser.connections.includes(user._id)) {
+      return navigate("/messages/" + user._id);
+    }
+
+    try {
+      const { data } = await api.post(
+        "/api/user/connect",
+        { id: user._id },
+        {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        },
+      );
+      if (data.success) {
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
   return (
     <div
       key={user._id}
@@ -15,7 +63,7 @@ const UserCard = ({ user }) => {
         <img
           src={user.profile_picture}
           alt="Profile Picture"
-          className="rounded-full w-16 shadow-md mx-auto"
+          className="w-16 h-16 rounded-full object-cover shadow-md mx-auto"
         />
         <p className="mt-4 font-semibold">{user.full_name}</p>
         {user.username && (

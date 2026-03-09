@@ -137,7 +137,7 @@ const followUser = async (req, res) => {
     user.following.push(id);
     await user.save();
 
-    const toUser = await user.findById(id);
+    const toUser = await User.findById(id);
     toUser.followers.push(userId);
     await toUser.save();
 
@@ -243,12 +243,14 @@ const getUserConnections = async (req, res) => {
     const followers = user.followers;
     const following = user.following;
 
-    const pendingConnections = await Connection.find({
+    const pendingConnectionDocs = await Connection.find({
       to_user_id: userId,
       status: "pending",
-    })
-      .populate("from_user_id")
-      .map((connection) => connection.from_user_id);
+    }).populate("from_user_id");
+
+    const pendingConnections = pendingConnectionDocs.map(
+      (connection) => connection.from_user_id,
+    );
 
     res.json({
       success: true,

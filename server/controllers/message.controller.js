@@ -2,10 +2,10 @@ import fs from "fs";
 import imagekit from "../configs/imageKit.config.js";
 import Message from "../models/message.model.js";
 
-// Create an empty object to store server side event connections
+// Create an empty object to store server sent event connections
 const connections = {};
 
-// Controller function for the server side event endpoint
+// Controller function for the server sent event endpoint
 const sseController = (req, res) => {
   const { userId } = req.params;
   console.log("New client connected : ", userId);
@@ -111,9 +111,9 @@ const getChatMessages = async (req, res) => {
 const getUserRecentMessages = async (req, res) => {
   try {
     const { userId } = req.auth();
-    const messages = await Message.find(
-      { to_user_id: userId }.populate("from_user_id to_user_id"),
-    ).sort({ created_at: -1 });
+    const messages = await Message.find({ to_user_id: userId })
+      .populate("from_user_id to_user_id")
+      .sort({ createdAt: -1 });
 
     res.json({ success: true, messages });
   } catch (error) {
